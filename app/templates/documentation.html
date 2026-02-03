@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<header>
+    <h1>Documentation</h1>
+    <p class="subtitle">Understanding DHCP Vulnerabilities</p>
+</header>
+
+<div class="card docs-content">
+    <h2>DHCP Protocol Basics</h2>
+    <p>Dynamic Host Configuration Protocol (DHCP) is used to assign IP addresses and network configuration to devices
+        automatically. The process typically follows the DORA exchange:</p>
+    <ul>
+        <li><strong>D</strong>iscover: Client broadcasts looking for a server.</li>
+        <li><strong>O</strong>ffer: Server offers an IP address.</li>
+        <li><strong>R</strong>equest: Client requests the offered IP.</li>
+        <li><strong>A</strong>ck: Server acknowledges and reserves the IP.</li>
+    </ul>
+
+    <h2>Attack Scenarios</h2>
+
+    <h3>1. DHCP Starvation (Saturation)</h3>
+    <p>An attacker floods the DHCP server with DISCOVER packets using spoofed MAC addresses. This exhausts the server's
+        IP address pool, preventing legitimate clients from connecting to the network.</p>
+
+    <h3>2. IP Conflict</h3>
+    <p>An attacker statically assigns themselves an IP that is already in use or currently being offered by the DHCP
+        server, causing network instability for the legitimate owner of that IP.</p>
+
+    <h3>3. DHCP Spoofing (Rogue Server)</h3>
+    <p>An attacker sets up a rogue DHCP server to answer DISCOVER requests faster than the legitimate server, assigning
+        clients malicious DNS servers or gateways (Man-in-the-Middle).</p>
+
+    <div
+        style="margin-top: 2rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--accent);">
+        <strong>Educational Note:</strong> This tool generates synthetic traffic to visualize these patterns safe from a
+        production environment.
+    </div>
+</div>
+{% endblock %}
