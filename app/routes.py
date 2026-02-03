@@ -20,7 +20,19 @@ def start_attack():
     iface = data.get('iface', 'eth0')
     target_ip = data.get('target_ip')
     
-    success, message = attack_manager.start_attack(attack_type, iface, target_ip=target_ip)
+    # Extract optional params for Rogue Server
+    rogue_server_ip = data.get('rogue_server_ip')
+    rogue_gateway = data.get('rogue_gateway')
+    rogue_dns = data.get('rogue_dns')
+    
+    success, message = attack_manager.start_attack(
+        attack_type, 
+        iface, 
+        target_ip=target_ip,
+        rogue_server_ip=rogue_server_ip,
+        rogue_gateway=rogue_gateway,
+        rogue_dns=rogue_dns
+    )
     if success:
         return jsonify({'status': 'started', 'message': message})
     return jsonify({'status': 'error', 'message': message}), 400

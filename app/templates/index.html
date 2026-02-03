@@ -1,135 +1,396 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="container-fluid p-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1>DHCP Attack Simulator</h1>
-            <p class="text-muted">Network Security Testing Dashboard</p>
-        </div>
-    </div>
-
-    <div class="alert alert-warning d-flex align-items-center" role="alert">
-        <svg width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2"
-            viewBox="0 0 16 16">
-            <path
-                d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-        </svg>
-        <div>
-            <strong>EDUCATIONAL USE ONLY:</strong> Ensure you have authorization before running attacks on any network.
-        </div>
-    </div>
-
-    <!-- Configuration -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Network Configuration</h5>
-        </div>
-        <div class="card-body">
-            <form id="config-form" onsubmit="return false;">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label for="iface" class="form-label">Network Interface</label>
-                        <input type="text" class="form-control font-monospace" id="iface" placeholder="e.g. eth0"
-                            value="eth0">
-                        <div class="form-text">Run <code>ip link</code> to find your interface.</div>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="target_ip" class="form-label">Target IP Address</label>
-                        <input type="text" class="form-control font-monospace" id="target_ip"
-                            placeholder="e.g. 10.0.0.5">
-                        <div class="form-text">Required for NAK, Release, Decline.</div>
-                    </div>
-                    <div class="col-md-4">
-                        <button class="btn btn-info w-100 text-white" onclick="runRecon()">
-                            <span id="recon-spinner" class="spinner-border spinner-border-sm d-none" role="status"
-                                aria-hidden="true"></span>
-                            Scan for DHCP Server
+<div class="container-fluid px-4">
+    <!-- Header Stats Row -->
+    <div class="row g-4 mb-4">
+        <!-- Configuration Card -->
+        <div class="col-lg-4 col-md-12">
+            <div class="glass-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white">Target Configuration</h5>
+                    <span class="badge bg-info bg-opacity-10 text-info">Setup</span>
+                </div>
+                <div class="card-body">
+                    <form id="config-form" onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">INTERFACE</label>
+                            <input type="text" class="form-control font-monospace" id="iface" value="eth0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small">TARGET IP</label>
+                            <input type="text" class="form-control font-monospace" id="target_ip"
+                                placeholder="e.g. 192.168.1.10">
+                        </div>
+                        <button class="btn btn-primary-glow w-100" onclick="runRecon()">
+                            <span id="recon-spinner" class="spinner-border spinner-border-sm d-none me-2"></span>
+                            Scan Network
                         </button>
+                        <div id="recon-result" class="mt-3 small text-muted font-monospace"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Chart -->
+        <div class="col-lg-4 col-md-6">
+            <div class="glass-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0 text-white">Attack Intensity</h5>
+                </div>
+                <div class="card-body d-flex flex-column justify-content-center">
+                    <canvas id="attackChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="col-lg-4 col-md-6">
+            <div class="glass-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white">Live Operations Log</h5>
+                    <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+                </div>
+                <div class="card-body p-0">
+                    <div id="log-window" class="terminal-window rounded-bottom-4">
+                        <div class="log-entry"><span class="log-time">System</span> <span class="log-msg">Ready for
+                                operations...</span></div>
                     </div>
                 </div>
-            </form>
-            <div id="recon-result" class="mt-3"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Attack Control Panel -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0">Attack Control Panel</h5>
+    <!-- Attacks Grid -->
+    <h4 class="text-white mb-3">Attack Modules</h4>
+    <div class="row g-4">
+
+        <!-- Starvation -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card attack-card">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-white mb-0">Starvation</h5>
+                        <small class="text-muted">Pool Exhaustion</small>
+                    </div>
+                    <div id="status-dot-starvation" class="status-dot"></div>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">Floods server with random MACs to consume all IP leases.</p>
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <div class="attack-label">Sent</div>
+                            <div class="attack-metric" id="metric-starvation">0</div>
+                        </div>
+                    </div>
+                    <button id="btn-start-starvation" class="btn btn-success-glow w-100"
+                        onclick="toggleAttack('starvation')">Start Attack</button>
+                    <button id="btn-stop-starvation" class="btn btn-danger-glow w-100 d-none"
+                        onclick="toggleAttack('starvation')">Stop Attack</button>
+                </div>
+            </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 20%;">Attack Type</th>
-                            <th style="width: 45%;">Description</th>
-                            <th style="width: 15%;">Status</th>
-                            <th style="width: 20%;">Controls</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr id="row-starvation">
-                            <td class="fw-bold">DHCP Starvation</td>
-                            <td>Floods DHCP DISCOVER packets with random MAC addresses to exhuast the server's IP pool.
-                            </td>
-                            <td><span class="badge bg-secondary status-badge">Stopped</span></td>
-                            <td>
-                                <button class="btn btn-success btn-sm w-100 start-btn"
-                                    onclick="startAttack('starvation')">Start Attack</button>
-                                <button class="btn btn-danger btn-sm w-100 stop-btn d-none"
-                                    onclick="stopAttack('starvation')">Stop Attack</button>
-                            </td>
-                        </tr>
-                        <tr id="row-nak">
-                            <td class="fw-bold">DHCP NAK Attack</td>
-                            <td>Sends forged DHCP NAK messages to the target IP to force lease termination.</td>
-                            <td><span class="badge bg-secondary status-badge">Stopped</span></td>
-                            <td>
-                                <button class="btn btn-success btn-sm w-100 start-btn"
-                                    onclick="startAttack('nak')">Start Attack</button>
-                                <button class="btn btn-danger btn-sm w-100 stop-btn d-none"
-                                    onclick="stopAttack('nak')">Stop Attack</button>
-                            </td>
-                        </tr>
-                        <tr id="row-release">
-                            <td class="fw-bold">DHCP Release</td>
-                            <td>Spoofs the victim's MAC address to send a DHCP RELEASE packet, freeing their IP.</td>
-                            <td><span class="badge bg-secondary status-badge">Stopped</span></td>
-                            <td>
-                                <button class="btn btn-success btn-sm w-100 start-btn"
-                                    onclick="startAttack('release')">Start Attack</button>
-                                <button class="btn btn-danger btn-sm w-100 stop-btn d-none"
-                                    onclick="stopAttack('release')">Stop Attack</button>
-                            </td>
-                        </tr>
-                        <tr id="row-flood">
-                            <td class="fw-bold">DHCP Discover Flood</td>
-                            <td>High-frequency bombardment of DHCP DISCOVER requests to stress the server.</td>
-                            <td><span class="badge bg-secondary status-badge">Stopped</span></td>
-                            <td>
-                                <button class="btn btn-success btn-sm w-100 start-btn"
-                                    onclick="startAttack('flood')">Start Attack</button>
-                                <button class="btn btn-danger btn-sm w-100 stop-btn d-none"
-                                    onclick="stopAttack('flood')">Stop Attack</button>
-                            </td>
-                        </tr>
-                        <tr id="row-decline">
-                            <td class="fw-bold">DHCP Decline</td>
-                            <td>Sends DHCP DECLINE messages for a specific IP to mark it as "bad" or "in use".</td>
-                            <td><span class="badge bg-secondary status-badge">Stopped</span></td>
-                            <td>
-                                <button class="btn btn-success btn-sm w-100 start-btn"
-                                    onclick="startAttack('decline')">Start Attack</button>
-                                <button class="btn btn-danger btn-sm w-100 stop-btn d-none"
-                                    onclick="stopAttack('decline')">Stop Attack</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+        <!-- Flood -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card attack-card">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-white mb-0">Discover Flood</h5>
+                        <small class="text-muted">DoS Stress Test</small>
+                    </div>
+                    <div id="status-dot-flood" class="status-dot"></div>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">High-velocity packet storm to overwhelm server resources.</p>
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <div class="attack-label">Sent</div>
+                            <div class="attack-metric" id="metric-flood">0</div>
+                        </div>
+                    </div>
+                    <button id="btn-start-flood" class="btn btn-success-glow w-100"
+                        onclick="toggleAttack('flood')">Start Attack</button>
+                    <button id="btn-stop-flood" class="btn btn-danger-glow w-100 d-none"
+                        onclick="toggleAttack('flood')">Stop Attack</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Release -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card attack-card">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-white mb-0">DHCP Release</h5>
+                        <small class="text-muted">Lease Termination</small>
+                    </div>
+                    <div id="status-dot-release" class="status-dot"></div>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">Spoofs victim to forcefully release their IP address.</p>
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm mb-2" id="release-target-ip"
+                            placeholder="Target IP Override">
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <div class="attack-label">Sent</div>
+                            <div class="attack-metric" id="metric-release">0</div>
+                        </div>
+                    </div>
+                    <button id="btn-start-release" class="btn btn-success-glow w-100"
+                        onclick="toggleAttack('release')">Start Attack</button>
+                    <button id="btn-stop-release" class="btn btn-danger-glow w-100 d-none"
+                        onclick="toggleAttack('release')">Stop Attack</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rogue Server -->
+        <div class="col-xl-3 col-md-6">
+            <div class="glass-card attack-card">
+                <div class="card-header d-flex justify-content-between">
+                    <div>
+                        <h5 class="text-white mb-0">Rogue Server</h5>
+                        <small class="text-muted">MITM / Spoofing</small>
+                    </div>
+                    <div id="status-dot-rogue_server" class="status-dot"></div>
+                </div>
+                <div class="card-body">
+                    <p class="text-secondary small">Responds to DISCOVER packets with fake configuration.</p>
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm mb-1" id="rogue-ip"
+                            placeholder="Rogue Server IP" value="192.168.1.66">
+                        <input type="text" class="form-control form-control-sm" id="rogue-dns" placeholder="Fake DNS"
+                            value="8.8.8.8">
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end mb-3">
+                        <div>
+                            <div class="attack-label">Offers</div>
+                            <div class="attack-metric" id="metric-rogue_server">0</div>
+                        </div>
+                    </div>
+                    <button id="btn-start-rogue_server" class="btn btn-success-glow w-100"
+                        onclick="toggleAttack('rogue_server')">Start Server</button>
+                    <button id="btn-stop-rogue_server" class="btn btn-danger-glow w-100 d-none"
+                        onclick="toggleAttack('rogue_server')">Stop Server</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // --- Chart Setup ---
+    const ctx = document.getElementById('attackChart').getContext('2d');
+    const attackChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(20).fill(''),
+            datasets: [{
+                label: 'Total Packets/Sec',
+                data: Array(20).fill(0),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { display: false },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                }
+            },
+            animation: { duration: 0 }
+        }
+    });
+
+    // --- State ---
+    let activeAttacks = new Set();
+    let previousTotalPackets = 0;
+
+    // --- API Calls ---
+
+    async function runRecon() {
+        const btn = document.querySelector('button[onclick="runRecon()"]');
+        const spinner = document.getElementById('recon-spinner');
+        const resultDiv = document.getElementById('recon-result');
+        const iface = document.getElementById('iface').value;
+
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+        resultDiv.innerHTML = '<span class="text-info">Scanning...</span>';
+
+        try {
+            const response = await fetch('/api/recon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ iface: iface })
+            });
+            const data = await response.json();
+
+            if (data.server_ip) {
+                resultDiv.innerHTML = `
+                <div class="text-success">✔ Found Server</div>
+                <div>IP: <span class="text-white">${data.server_ip}</span></div>
+                <div>MAC: <span class="text-white">${data.server_mac}</span></div>
+            `;
+                // Auto-fill target IP if empty
+                if (!document.getElementById('target_ip').value) {
+                    // document.getElementById('target_ip').value = data.offered_ip; // Usually we target the client, but for NAK we need server sometimes? 
+                    // Actually target_ip usually means VICTIM IP. 
+                }
+            } else {
+                resultDiv.innerHTML = `<span class="text-warning">${data.result || 'No response'}</span>`;
+            }
+        } catch (e) {
+            resultDiv.innerHTML = `<span class="text-danger">Error: ${e.message}</span>`;
+        } finally {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    }
+
+    async function toggleAttack(type) {
+        const iface = document.getElementById('iface').value;
+        const targetIp = document.getElementById('target_ip').value; // Main target
+
+        // Determine action based on current button visibility or local state
+        // But better to check backend status. For UI responsiveness we assume toggle.
+        const isRunning = activeAttacks.has(type);
+
+        const endpoint = isRunning ? '/api/attack/stop' : '/api/attack/start';
+
+        const payload = {
+            type: type,
+            iface: iface,
+            target_ip: targetIp
+        };
+
+        // Add type-specific overrides
+        if (type === 'release') {
+            const override = document.getElementById('release-target-ip').value;
+            if (override) payload.target_ip = override;
+        }
+        if (type === 'rogue_server') {
+            payload.rogue_server_ip = document.getElementById('rogue-ip').value;
+            payload.rogue_dns = document.getElementById('rogue-dns').value;
+        }
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (data.status === 'error') {
+                alert('Error: ' + data.message);
+            } else {
+                // Update local state immediately for better UX, though polling will confirm
+                if (!isRunning) activeAttacks.add(type);
+                else activeAttacks.delete(type);
+                updateControlButtons();
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function updateControlButtons() {
+        ['starvation', 'flood', 'release', 'rogue_server', 'nak', 'decline'].forEach(type => {
+            const btnStart = document.getElementById(`btn-start-${type}`);
+            const btnStop = document.getElementById(`btn-stop-${type}`);
+            const dot = document.getElementById(`status-dot-${type}`);
+
+            if (!btnStart) return; // Skip if not on page
+
+            if (activeAttacks.has(type)) {
+                btnStart.classList.add('d-none');
+                btnStop.classList.remove('d-none');
+                dot.classList.add('active');
+            } else {
+                btnStart.classList.remove('d-none');
+                btnStop.classList.add('d-none');
+                dot.classList.remove('active');
+            }
+        });
+    }
+
+    function appendLogs(logs) {
+        const win = document.getElementById('log-window');
+        // Clear old if too many? No, backend handles truncation. 
+        // We just need to append NEW logs. 
+        // For simplicity in this poll-based app, we might clear and redraw or only add new.
+        // Let's just redraw for now to ensure sync, or check timestamps.
+        // Optimization: simply clear and replace content is easiest for 1 sec polling.
+
+        win.innerHTML = logs.map(l =>
+            `<div class="log-entry">
+            <span class="log-time">[${l.time}]</span> 
+            <span class="log-type ${l.type === 'System' ? 'text-info' : 'text-warning'}">${l.type}</span> 
+            <span class="log-msg">${l.msg}</span>
+         </div>`
+        ).join('');
+        win.scrollTop = win.scrollHeight;
+    }
+
+    async function pollStatus() {
+        try {
+            const response = await fetch('/api/attack/status');
+            const data = await response.json();
+
+            // data = { attacks: { type: { running: bool, metrics: {sent: int} } }, logs: [] }
+
+            let totalSent = 0;
+
+            // Update Attack States
+            activeAttacks.clear();
+            for (const [type, info] of Object.entries(data.attacks)) {
+                if (info.running) {
+                    activeAttacks.add(type);
+                }
+                // Update metrics
+                const metricEl = document.getElementById(`metric-${type}`);
+                if (metricEl) metricEl.innerText = info.metrics.sent;
+
+                totalSent += info.metrics.sent;
+            }
+
+            updateControlButtons();
+            appendLogs(data.logs);
+
+            // Update Chart
+            // We need rate (packets/sec) -> change in totalSent since last poll
+            // Assume 1000ms poll interval
+            const rate = totalSent - previousTotalPackets;
+            // Handle first run
+            if (previousTotalPackets === 0 && rate > 1000) {
+                // likely app restart, ignore spike
+            } else {
+                // Shift and push
+                attackChart.data.datasets[0].data.shift();
+                attackChart.data.datasets[0].data.push(Math.max(0, rate));
+                attackChart.update();
+            }
+            previousTotalPackets = totalSent;
+
+        } catch (e) {
+            console.error("Poll error", e);
+        }
+    }
+
+    // Start polling
+    setInterval(pollStatus, 1000);
+    updateControlButtons(); // Init
+</script>
 {% endblock %}
