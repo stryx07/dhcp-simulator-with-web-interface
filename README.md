@@ -4,20 +4,6 @@
 
 A Python Flask application designed for cybersecurity education. It allows users to simulate and control various DHCP attacks via a premium, real-time web interface using the Scapy library.
 
-## ✨ New Features v2.0
-
--   **Premium Dark UI**: Glassmorphism design with real-time animations.
--   **Live Metrics**: Real-time chart showing attack intensity (packets/second).
--   **Operation Logs**: Live terminal-style log window of all attack events.
--   **Rogue DHCP Server**: New module to simulate a MITM Rogue Server.
-
-## 🛡 Attack Modules
-
-1.  **DHCP Starvation**: Exhausts the DHCP server's IP pool by flooding requests from random MAC addresses.
-2.  **DHCP Discover Flood**: A DoS attack that overwhelms the server with high-frequency DISCOVER packets.
-3.  **DHCP Release**: Spoofs a victim's MAC address to send a RELEASE packet, disconnecting them from the network.
-4.  **DHCP Decline**: Marks arbitrary IPs as "in use" by sending false DECLINE messages.
-5.  **Rogue Server**: Listens for DISCOVER packets and replies with a malicious OFFER (fake Gateway/DNS).
 
 ## 🚀 Installation & Usage
 
